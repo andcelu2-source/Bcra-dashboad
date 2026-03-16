@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BCRA · Dashboard de Morosidad v2.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300&family=Familjen+Grotesk:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:       #09090b;
+  --bg2:      #111114;
+  --surface:  #18181b;
+  --surface2: #1f1f23;
+  --border:   #27272a;
+  --border2:  #3f3f46;
+  --text:     #fafafa;
+  --muted:    #71717a;
+  --muted2:   #52525b;
+  --accent:   #f97316;
+  --accent2:  #fb923c;
+  --blue:     #3b82f6;
+
+  --s1: #22c55e;
+  --s2: #a3e635;
+  --s3: #facc15;
+  --s4: #f97316;
+  --s5: #ef4444;
+
+  --fh: 'Familjen Grotesk', sans-serif;
+  --fb: 'Figtree', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--fb);
+  font-size: 13px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* subtle grid */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 48px 48px;
+  opacity: .25;
+  pointer-events: none; z-index: 0;
+}
+
+.wrap { position: relative; z-index: 1; max-width: 1440px; margin: 0 auto; padding: 0 24px 48px; }
+
+
+
+
+
+
+
+.btn {
+  font-family: var(--fb); font-size: 12px; font-weight: 600;
+  padding: 10px 20px; border-radius: 8px;
+  cursor: pointer; border: none; transition: all .15s; letter-spacing: .02em;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent2); }
+.btn-ghost { background: var(--surface2); border: 1px solid var(--border2); color: var(--muted); }
+.btn-ghost:hover { color: var(--text); border-color: var(--border2); }
+
+
+
+
+/* ── TOPBAR ───────────────────────────────────────────── */
+.topbar {
+  display: flex; align-items: center;
+  padding: 20px 0 20px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 32px; gap: 20px; flex-wrap: wrap;
+}
+.logo-group { display: flex; align-items: center; gap: 12px; flex: 1; }
+.logo-badge {
+  background: var(--accent);
+  color: #fff; font-family: var(--fh);
+  font-weight: 700; font-size: 13px;
+  padding: 5px 10px; border-radius: 6px;
+  letter-spacing: .06em;
+}
+.logo-title {
+  font-family: var(--fh); font-size: 18px;
+  font-weight: 700; letter-spacing: -.01em;
+}
+.logo-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+.status-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; padding: 5px 12px; border-radius: 20px;
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--muted);
+}
+.dot { width: 6px; height: 6px; border-radius: 50%; }
+.dot.g { background: var(--s1); box-shadow: 0 0 6px var(--s1); animation: pulse 2s infinite; }
+.dot.r { background: var(--s5); }
+.dot.y { background: var(--s3); animation: pulse .8s infinite; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+.btn-sm {
+  font-family: var(--fb); font-size: 11px; font-weight: 500;
+  padding: 6px 14px; border-radius: 6px; cursor: pointer;
+  background: var(--surface2); border: 1px solid var(--border2);
+  color: var(--muted); transition: all .15s;
+}
+.btn-sm:hover { color: var(--text); border-color: var(--accent); }
+
+/* ── CONTROLS ─────────────────────────────────────────── */
+.controls {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 28px; flex-wrap: wrap;
+}
+.ctrl-label { font-size: 11px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+.period-pills { display: flex; gap: 5px; }
+.pill {
+  font-family: var(--fb); font-size: 11px; font-weight: 500;
+  padding: 5px 12px; border-radius: 20px; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--muted); transition: all .12s;
+}
+.pill:hover { border-color: var(--accent); color: var(--text); }
+.pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.divider { width: 1px; height: 20px; background: var(--border); }
+.search-wrap { position: relative; }
+.search-wrap input {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-family: var(--fb);
+  font-size: 12px; padding: 6px 12px 6px 32px;
+  outline: none; transition: border-color .15s; width: 200px;
+}
+.search-wrap input:focus { border-color: var(--accent); }
+.search-wrap::before {
+  content: '🔍'; position: absolute;
+  left: 10px; top: 50%; transform: translateY(-50%);
+  font-size: 11px; pointer-events: none;
+}
+.tipo-pills { display: flex; gap: 5px; }
+
+/* ── KPI STRIP ────────────────────────────────────────── */
+.kpi-strip {
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  gap: 12px; margin-bottom: 28px;
+}
+.kpi {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px; padding: 18px 20px;
+  position: relative; overflow: hidden;
+  transition: transform .15s, border-color .15s;
+  cursor: default;
+}
+.kpi:hover { transform: translateY(-2px); border-color: var(--border2); }
+.kpi::after {
+  content: ''; position: absolute;
+  bottom: 0; left: 0; right: 0; height: 2px;
+}
+.kpi.s1::after { background: var(--s1); }
+.kpi.s2::after { background: var(--s2); }
+.kpi.s3::after { background: var(--s3); }
+.kpi.s4::after { background: var(--s4); }
+.kpi.s5::after { background: var(--s5); }
+.kpi-label {
+  font-size: 10px; color: var(--muted); letter-spacing: .08em;
+  text-transform: uppercase; margin-bottom: 12px;
+  display: flex; align-items: center; gap: 6px;
+}
+.kpi-label::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+}
+.kpi.s1 .kpi-label::before { background: var(--s1); }
+.kpi.s2 .kpi-label::before { background: var(--s2); }
+.kpi.s3 .kpi-label::before { background: var(--s3); }
+.kpi.s4 .kpi-label::before { background: var(--s4); }
+.kpi.s5 .kpi-label::before { background: var(--s5); }
+.kpi-val {
+  font-family: var(--fh); font-size: 38px; font-weight: 700;
+  line-height: 1; letter-spacing: -.02em; margin-bottom: 10px;
+}
+.kpi.s1 .kpi-val { color: var(--s1); }
+.kpi.s2 .kpi-val { color: var(--s2); }
+.kpi.s3 .kpi-val { color: var(--s3); }
+.kpi.s4 .kpi-val { color: var(--s4); }
+.kpi.s5 .kpi-val { color: var(--s5); }
+.kpi-delta {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 11px; font-weight: 500; padding: 3px 8px; border-radius: 5px;
+}
+.kpi-delta.up   { background: rgba(239,68,68,.12); color: var(--s5); }
+.kpi-delta.down { background: rgba(34,197,94,.12);  color: var(--s1); }
+.kpi-delta.flat { background: rgba(113,113,122,.12);color: var(--muted); }
+.kpi-sub { font-size: 10px; color: var(--muted2); margin-top: 6px; }
+
+/* ── GRID ─────────────────────────────────────────────── */
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.grid2 .span2 { grid-column: 1 / -1; }
+.grid3 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden;
+}
+.card-head {
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+}
+.card-title { font-family: var(--fh); font-size: 14px; font-weight: 600; }
+.card-sub { font-size: 10px; color: var(--muted); margin-top: 3px; }
+.card-body { padding: 18px 20px 14px; }
+.card-body canvas { max-height: 280px !important; }
+
+/* ── RANKING TABLE ────────────────────────────────────── */
+.rank-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.rank-table thead th {
+  padding: 8px 14px; text-align: right;
+  font-size: 9px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--muted2); border-bottom: 1px solid var(--border);
+  white-space: nowrap; background: var(--surface);
+}
+.rank-table thead th:first-child,
+.rank-table thead th:nth-child(2) { text-align: left; }
+.rank-table tbody tr {
+  border-bottom: 1px solid rgba(39,39,42,.6);
+  transition: background .1s; cursor: pointer;
+}
+.rank-table tbody tr:hover { background: var(--surface2); }
+.rank-table tbody tr.selected { background: rgba(249,115,22,.08); border-left: 2px solid var(--accent); }
+.rank-table td { padding: 10px 14px; text-align: right; }
+.rank-table td:first-child { text-align: left; font-size: 11px; color: var(--muted); width: 32px; }
+.rank-table td:nth-child(2) { text-align: left; font-weight: 500; }
+.rank-num { font-family: var(--fh); font-weight: 700; color: var(--muted2); }
+
+/* Barra de mora inline */
+.mora-bar-wrap { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+.mora-bar-bg { width: 60px; height: 5px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+.mora-bar-fill { height: 100%; border-radius: 3px; transition: width .4s; }
+
+/* ── BANCO DETAIL PANEL ───────────────────────────────── */
+.detail-panel {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 12px; padding: 20px 24px;
+  margin-bottom: 16px; display: none;
+}
+.detail-panel.visible { display: block; }
+.detail-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px; flex-wrap: wrap; gap: 12px;
+}
+.detail-name { font-family: var(--fh); font-size: 18px; font-weight: 700; }
+.detail-tipo { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.detail-close {
+  background: none; border: 1px solid var(--border);
+  color: var(--muted); font-size: 16px; width: 28px; height: 28px;
+  border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.detail-close:hover { border-color: var(--s5); color: var(--s5); }
+.detail-kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 20px; }
+.detail-kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+.detail-kpi-label { font-size: 9px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
+.detail-kpi-val { font-family: var(--fh); font-size: 22px; font-weight: 700; }
+.detail-kpi.s1 .detail-kpi-val { color: var(--s1); }
+.detail-kpi.s2 .detail-kpi-val { color: var(--s2); }
+.detail-kpi.s3 .detail-kpi-val { color: var(--s3); }
+.detail-kpi.s4 .detail-kpi-val { color: var(--s4); }
+.detail-kpi.s5 .detail-kpi-val { color: var(--s5); }
+.detail-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.detail-chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+.detail-chart-title { font-size: 11px; font-weight: 600; margin-bottom: 12px; color: var(--muted); }
+.detail-chart-card canvas { max-height: 160px !important; }
+
+/* ── HEATMAP ──────────────────────────────────────────── */
+.hm-wrap { padding: 14px 20px 18px; overflow-x: auto; }
+.hm-grid { display: grid; gap: 3px; min-width: 500px; }
+.hm-lbl { font-size: 10px; color: var(--muted); display: flex; align-items: center; padding-right: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm-head { font-size: 9px; color: var(--muted2); text-align: center; padding-bottom: 4px; }
+.hm-cell {
+  height: 26px; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 500;
+  cursor: pointer; transition: transform .1s, opacity .1s;
+}
+.hm-cell:hover { transform: scale(1.15); z-index: 2; position: relative; }
+
+/* ── LOADER ───────────────────────────────────────────── */
+#page-loader {
+  position: fixed; inset: 0; background: var(--bg);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 16px; z-index: 99;
+  transition: opacity .4s;
+}
+#page-loader.hidden { opacity: 0; pointer-events: none; }
+.loader-ring {
+  width: 36px; height: 36px;
+  border: 3px solid var(--border2);
+  border-top-color: var(--accent);
+  border-radius: 50%; animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loader-txt { font-size: 12px; color: var(--muted); letter-spacing: .04em; }
+
+/* ── FOOTER ───────────────────────────────────────────── */
+footer {
+  margin-top: 40px; padding-top: 20px;
+  border-top: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+  color: var(--muted2); font-size: 10px; flex-wrap: wrap; gap: 8px;
+}
+footer a { color: var(--accent); text-decoration: none; }
+.ver-badge {
+  background: var(--accent); color: #fff;
+  font-size: 9px; padding: 2px 7px; border-radius: 4px;
+  font-weight: 600; letter-spacing: .06em; margin-right: 6px;
+}
+
+@media (max-width: 1024px) {
+  .kpi-strip { grid-template-columns: repeat(3,1fr); }
+  .grid2, .grid3 { grid-template-columns: 1fr; }
+  .grid2 .span2 { grid-column: 1; }
+  .detail-kpis { grid-template-columns: repeat(3,1fr); }
+  .detail-charts { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .kpi-strip { grid-template-columns: 1fr 1fr; }
+  .detail-kpis { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="page-loader">
+  <div class="loader-ring"></div>
+  <div class="loader-txt" id="loader-txt">Iniciando...</div>
+</div>
+
+<div class="wrap">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="logo-group">
+      <div class="logo-badge">BCRA</div>
+      <div>
+        <div class="logo-title">Dashboard de Morosidad Bancaria</div>
+        <div class="logo-sub">Datos reales por entidad · PDF Informe sobre Bancos · Supabase</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="status-chip">
+        <span class="dot" id="s-dot"></span>
+        <span id="s-txt">Desconectado</span>
+      </div>
+      <button class="btn-sm" id="btn-periodo-lbl" onclick="">—</button>
+      
+    </div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="controls">
+    <span class="ctrl-label">Período:</span>
+    <div class="period-pills" id="period-pills"></div>
+    <div class="divider"></div>
+    <span class="ctrl-label">Tipo:</span>
+    <div class="tipo-pills">
+      <div class="pill active" onclick="setTipo('todos',this)">Todos</div>
+      <div class="pill" onclick="setTipo('banco',this)">Bancos</div>
+      <div class="pill" onclick="setTipo('financiera',this)">Financieras</div>
+    </div>
+    <div class="divider"></div>
+    <div class="search-wrap">
+      <input id="search-input" type="text" placeholder="Buscar entidad..." oninput="filtrar()"/>
+    </div>
+  </div>
+
+  <!-- KPI STRIP -->
+  <div class="kpi-strip" id="kpi-strip"></div>
+
+  <!-- DETAIL PANEL (banco seleccionado) -->
+  <div class="detail-panel" id="detail-panel">
+    <div class="detail-header">
+      <div>
+        <div class="detail-name" id="detail-name">—</div>
+        <div class="detail-tipo" id="detail-tipo">—</div>
+      </div>
+      <button class="detail-close" onclick="cerrarDetalle()">✕</button>
+    </div>
+    <div class="detail-kpis" id="detail-kpis"></div>
+    <div class="detail-charts">
+      <div class="detail-chart-card">
+        <div class="detail-chart-title">Evolución irregularidad total</div>
+        <canvas id="detail-line"></canvas>
+      </div>
+      <div class="detail-chart-card">
+        <div class="detail-chart-title">Composición de mora — último período</div>
+        <canvas id="detail-donut"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="grid3">
+
+    <!-- Ranking table -->
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Ranking de irregularidad</div>
+          <div class="card-sub" id="ranking-sub">Último período disponible · click en banco para detalle</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn-sm" onclick="sortRanking('irr_total')">Total</button>
+          <button class="btn-sm" onclick="sortRanking('sit5')">Sit.5</button>
+        </div>
+      </div>
+      <div style="overflow-y:auto;max-height:520px">
+        <table class="rank-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Entidad</th>
+              <th>Irreg.%</th>
+              <th>Sit.3</th>
+              <th>Sit.4</th>
+              <th>Sit.5</th>
+              <th>Tendencia</th>
+            </tr>
+          </thead>
+          <tbody id="ranking-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Right column -->
+    <div style="display:flex;flex-direction:column;gap:16px">
+
+      <!-- Donut sistema -->
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Distribución del sistema</div>
+            <div class="card-sub">Promedio ponderado · período seleccionado</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <canvas id="donut-sistema"></canvas>
+        </div>
+      </div>
+
+      <!-- Stats rápidos -->
+      <div class="card">
+        <div class="card-head"><div><div class="card-title">Estadísticas del sistema</div></div></div>
+        <div class="card-body" id="stats-rapidos" style="display:flex;flex-direction:column;gap:10px"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Evolución sistema + heatmap -->
+  <div class="grid2">
+
+    <div class="card span2">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Evolución — irregularidad total por entidad</div>
+          <div class="card-sub" id="line-sub">Todos los períodos disponibles</div>
+        </div>
+        <button class="btn-sm" onclick="toggleTopBancos()">Top 10 / Todos</button>
+      </div>
+      <div class="card-body" style="padding-bottom:18px">
+        <canvas id="line-sistema" style="max-height:320px"></canvas>
+      </div>
+    </div>
+
+    <div class="card span2">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Mapa de calor — irregularidad por entidad</div>
+          <div class="card-sub">Todos los períodos · escala: verde → rojo</div>
+        </div>
+      </div>
+      <div class="hm-wrap" id="heatmap"></div>
+    </div>
+
+  </div>
+
+  <footer>
+    <div><span class="ver-badge">v2.0</span>Datos del <a href="https://www.bcra.gob.ar" target="_blank">BCRA</a> — Informe de Entidades Financieras · Parser PDF + Supabase</div>
+    <div id="footer-info">—</div>
+  </footer>
+
+</div><!-- /wrap -->
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  CONFIG & CONEXIÓN
+// ═══════════════════════════════════════════════════════════
+const LS = { SEL:'bcra_v2_sel' };
+// ── CREDENCIALES — reemplazá con las tuyas antes de deployar ──
+// La anon key de Supabase es pública por diseño: solo permite
+// leer con las políticas RLS que vos definís.
+const SB_URL = 'https://bbutxrewtomsnnqovxxt.supabase.co';   // ← tu URL
+const SB_KEY = 'sb_publishable_KLuWgsL_9QAbx-iGqXr_sA_fqA_rRm5';                         // ← tu anon key
+// ──────────────────────────────────────────────────────────────
+
+function setLoader(txt) { document.getElementById('loader-txt').textContent = txt; }
+function hideLoader() { document.getElementById('page-loader').classList.add('hidden'); }
+function abrirConfig() { /* credenciales hardcodeadas en el código */ }
+
+function setStatus(c, txt) {
+  document.getElementById('s-dot').className = `dot ${c}`;
+  document.getElementById('s-txt').textContent = txt;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SUPABASE FETCH
+// ═══════════════════════════════════════════════════════════
+async function sbFetch(tabla, params = '') {
+  const res = await fetch(`${SB_URL}/rest/v1/${tabla}?${params}`, {
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': `Bearer ${SB_KEY}`
+    }
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+  return res.json();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ESTADO
+// ═══════════════════════════════════════════════════════════
+let allData   = [];   // todos los registros de bcra_ent_mora
+let periodos  = [];
+let bancos    = [];
+let curPeriodo = null;
+let curTipo   = 'todos';
+let curSearch = '';
+let sortCol   = 'irr_total';
+let showTop10 = true;
+let selBanco  = null;
+let lineChart, donutChart, detailLine, detailDonut;
+
+// ═══════════════════════════════════════════════════════════
+//  CARGA DE DATOS
+// ═══════════════════════════════════════════════════════════
+async function cargarDatos() {
+  setLoader('Cargando períodos...');
+
+  try {
+    // Cargar vista bcra_ent_mora completa
+    setLoader('Descargando datos de Supabase...');
+    const raw = await sbFetch('bcra_ent_mora',
+      'select=banco,periodo,sit1,sit2,sit3,sit4,sit5,irr_total,irr_privado,activo,prestamos,depositos,patrimonio,cobertura,roa,liquidez&order=banco.asc,periodo.desc'
+    );
+
+    allData  = raw;
+    periodos = [...new Set(raw.map(r => r.periodo))].sort().reverse();
+    bancos   = [...new Set(raw.map(r => r.banco))].sort();
+    curPeriodo = periodos[0];
+
+    setStatus('g', `Conectado · ${bancos.length} entidades`);
+    showCfgMsg('✓ Conectado', 'ok');
+
+    document.getElementById('footer-info').textContent =
+      `${bancos.length} entidades · ${periodos.length} períodos · ${raw.length.toLocaleString('es-AR')} registros`;
+
+    renderPeriodPills();
+    renderAll();
+    hideLoader();
+
+  } catch(e) {
+    showCfgMsg('Error: ' + e.message, 'err');
+    setStatus('r', 'Error de conexión');
+    hideLoader();
+    console.error(e);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════
+function fmt(n, d=2) { return n != null ? (+n).toFixed(d) : '—'; }
+function fmtM(n) { // millones
+  if (n == null) return '—';
+  if (n >= 1e6) return (n/1e6).toFixed(1) + 'B';
+  if (n >= 1e3) return (n/1e3).toFixed(0) + 'M';
+  return n.toFixed(0);
+}
+function avg(arr, key) {
+  const vals = arr.map(r => r[key]).filter(v => v != null);
+  return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+}
+
+function heatColor(v) {
+  if (v == null) return '#27272a';
+  const stops = [[0,[34,197,94]],[3,[163,230,53]],[6,[250,204,21]],[10,[249,115,22]],[15,[239,68,68]]];
+  let lo=stops[0], hi=stops[stops.length-1];
+  for (let i=0;i<stops.length-1;i++) {
+    if (v>=stops[i][0]&&v<=stops[i+1][0]){lo=stops[i];hi=stops[i+1];break;}
+  }
+  const t=Math.min(1,(v-lo[0])/(hi[0]-lo[0]||1));
+  return `rgb(${Math.round(lo[1][0]+t*(hi[1][0]-lo[1][0]))},${Math.round(lo[1][1]+t*(hi[1][1]-lo[1][1]))},${Math.round(lo[1][2]+t*(hi[1][2]-lo[1][2]))})`;
+}
+
+function getFiltered() {
+  return allData.filter(r => {
+    if (r.periodo !== curPeriodo) return false;
+    if (curTipo === 'banco' && !r.banco.toLowerCase().includes('banco') && !['Galicia','Macro','Supervielle','BBVA','Santander','Credicoop','Patagonia','Hipotecario','BROU','BICE','BST','BSF','ICBC','Citibank','JPMorgan','BNP Paribas','Bank of China'].includes(r.banco)) return false;
+    if (curTipo === 'financiera' && (r.banco.toLowerCase().includes('banco') || ['Galicia','Macro','Supervielle','BBVA','Santander','Credicoop','Patagonia','Hipotecario'].includes(r.banco))) return false;
+    if (curSearch && !r.banco.toLowerCase().includes(curSearch.toLowerCase())) return false;
+    return true;
+  });
+}
+
+function getPrevPeriodo() {
+  const idx = periodos.indexOf(curPeriodo);
+  return idx < periodos.length - 1 ? periodos[idx + 1] : null;
+}
+
+function getDataBanco(banco) {
+  return allData.filter(r => r.banco === banco).sort((a,b) => a.periodo.localeCompare(b.periodo));
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PERIOD PILLS
+// ═══════════════════════════════════════════════════════════
+function renderPeriodPills() {
+  document.getElementById('period-pills').innerHTML = periodos.map(p => `
+    <div class="pill ${p===curPeriodo?'active':''}" onclick="setPeriodo('${p}',this)">${p.substring(0,7)}</div>
+  `).join('');
+  document.getElementById('btn-periodo-lbl').textContent = curPeriodo?.substring(0,7) || '—';
+}
+
+function setPeriodo(p, el) {
+  curPeriodo = p;
+  document.querySelectorAll('.period-pills .pill').forEach(x => x.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('btn-periodo-lbl').textContent = p.substring(0,7);
+  renderAll();
+}
+
+function setTipo(t, el) {
+  curTipo = t;
+  document.querySelectorAll('.tipo-pills .pill').forEach(x => x.classList.remove('active'));
+  el.classList.add('active');
+  renderAll();
+}
+
+function filtrar() {
+  curSearch = document.getElementById('search-input').value;
+  renderRanking();
+  renderHeatmap();
+}
+
+function sortRanking(col) { sortCol = col; renderRanking(); }
+function toggleTopBancos() { showTop10 = !showTop10; renderLineChart(); }
+
+// ═══════════════════════════════════════════════════════════
+//  KPIs
+// ═══════════════════════════════════════════════════════════
+function renderKPIs() {
+  const cur  = getFiltered();
+  const prevP = getPrevPeriodo();
+  const prev = prevP ? allData.filter(r => r.periodo === prevP) : [];
+
+  const avgCur = key => avg(cur, key);
+  const avgPrev = key => avg(prev.filter(r => cur.find(c => c.banco === r.banco)), key);
+
+  const defs = [
+    { cls:'s1', label:'Situación 1', sub:'Normal', k:'sit1' },
+    { cls:'s2', label:'Situación 2', sub:'Seguimiento', k:'sit2' },
+    { cls:'s3', label:'Situación 3', sub:'Sub-estándar', k:'sit3' },
+    { cls:'s4', label:'Situación 4', sub:'Dudoso', k:'sit4' },
+    { cls:'s5', label:'Situación 5', sub:'Irrecuperable', k:'sit5' },
+  ];
+
+  document.getElementById('kpi-strip').innerHTML = defs.map(d => {
+    const v = avgCur(d.k);
+    const p = avgPrev(d.k);
+    const delta = v != null && p != null ? +(v-p).toFixed(2) : null;
+    const dc = delta == null ? 'flat' : delta > 0.1 ? 'up' : delta < -0.1 ? 'down' : 'flat';
+    const ds = delta == null ? '—' : delta > 0 ? '▲' : delta < 0 ? '▼' : '—';
+    return `<div class="kpi ${d.cls}">
+      <div class="kpi-label">${d.label}</div>
+      <div class="kpi-val">${v != null ? fmt(v,1) : '—'}%</div>
+      <span class="kpi-delta ${dc}">${ds} ${delta != null ? Math.abs(delta).toFixed(2)+' p.p.' : '—'}</span>
+      <div class="kpi-sub">${d.sub}${prevP ? ' · vs '+prevP.substring(0,7) : ''}</div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RANKING
+// ═══════════════════════════════════════════════════════════
+function renderRanking() {
+  const cur   = getFiltered().filter(r => r.irr_total != null);
+  const prevP = getPrevPeriodo();
+  const prev  = prevP ? allData.filter(r => r.periodo === prevP) : [];
+
+  cur.sort((a,b) => (b[sortCol]||0) - (a[sortCol]||0));
+
+  document.getElementById('ranking-sub').textContent =
+    `${cur.length} entidades · ${curPeriodo?.substring(0,7)} · ordenado por ${sortCol}`;
+
+  const maxIrr = Math.max(...cur.map(r => r.irr_total||0));
+
+  document.getElementById('ranking-body').innerHTML = cur.map((r, i) => {
+    const prevRow = prev.find(p => p.banco === r.banco);
+    const delta   = prevRow?.irr_total != null ? +(r.irr_total - prevRow.irr_total).toFixed(2) : null;
+    const dClass  = delta == null ? '' : delta > 0 ? 'style="color:var(--s5)"' : 'style="color:var(--s1)"';
+    const dStr    = delta == null ? '—' : (delta > 0 ? '▲ +' : '▼ ') + Math.abs(delta).toFixed(2);
+    const pct     = maxIrr > 0 ? (r.irr_total/maxIrr*100) : 0;
+    const bc      = heatColor(r.irr_total);
+    const isSelected = selBanco === r.banco;
+
+    return `<tr class="${isSelected?'selected':''}" onclick="seleccionarBanco('${r.banco.replace(/'/g,"\\'")}')">
+      <td><span class="rank-num">${i+1}</span></td>
+      <td>${r.banco}</td>
+      <td><strong style="color:${bc}">${fmt(r.irr_total)}%</strong></td>
+      <td style="color:var(--s3)">${fmt(r.sit3)}</td>
+      <td style="color:var(--s4)">${fmt(r.sit4)}</td>
+      <td style="color:var(--s5)">${fmt(r.sit5)}</td>
+      <td>
+        <div class="mora-bar-wrap">
+          <span ${dClass}>${dStr}</span>
+          <div class="mora-bar-bg"><div class="mora-bar-fill" style="width:${pct}%;background:${bc}"></div></div>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DONUT SISTEMA
+// ═══════════════════════════════════════════════════════════
+function renderDonutSistema() {
+  const cur = getFiltered();
+  const n = {
+    s1: avg(cur,'sit1'), s2: avg(cur,'sit2'),
+    s3: avg(cur,'sit3'), s4: avg(cur,'sit4'), s5: avg(cur,'sit5'),
+  };
+  const ctx = document.getElementById('donut-sistema');
+  if (donutChart) donutChart.destroy();
+  donutChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Sit.1 Normal','Sit.2 Seguimiento','Sit.3 Sub-estándar','Sit.4 Dudoso','Sit.5 Irrecuperable'],
+      datasets: [{
+        data: [n.s1,n.s2,n.s3,n.s4,n.s5].map(v => v?.toFixed(2)||0),
+        backgroundColor: ['#22c55e','#a3e635','#facc15','#f97316','#ef4444'],
+        borderWidth: 2, borderColor: '#18181b', hoverOffset: 8,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true, cutout: '65%',
+      plugins: {
+        legend: { position:'bottom', labels:{ color:'#71717a', font:{family:'Figtree',size:10}, boxWidth:10, padding:10 } },
+        tooltip: { backgroundColor:'#18181b', borderColor:'#27272a', borderWidth:1,
+          callbacks: { label: c => ` ${c.label}: ${(+c.parsed).toFixed(2)}%` } }
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  STATS RÁPIDOS
+// ═══════════════════════════════════════════════════════════
+function renderStats() {
+  const cur = getFiltered().filter(r => r.irr_total != null);
+  if (!cur.length) return;
+
+  const sorted = [...cur].sort((a,b) => b.irr_total - a.irr_total);
+  const avgIrr = avg(cur, 'irr_total');
+  const maxIrr = sorted[0];
+  const minIrr = sorted[sorted.length-1];
+  const conMora = cur.filter(r => r.irr_total > 5).length;
+
+  document.getElementById('stats-rapidos').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:11px;color:var(--muted)">Promedio sistema</span>
+      <strong style="font-family:var(--fh);color:var(--accent)">${fmt(avgIrr)}%</strong>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:11px;color:var(--muted)">Mayor mora</span>
+      <span style="font-size:11px;text-align:right"><strong style="color:var(--s5)">${fmt(maxIrr.irr_total)}%</strong><br><span style="color:var(--muted2);font-size:10px">${maxIrr.banco}</span></span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:11px;color:var(--muted)">Menor mora</span>
+      <span style="font-size:11px;text-align:right"><strong style="color:var(--s1)">${fmt(minIrr.irr_total)}%</strong><br><span style="color:var(--muted2);font-size:10px">${minIrr.banco}</span></span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0">
+      <span style="font-size:11px;color:var(--muted)">Entidades con mora >5%</span>
+      <strong style="font-family:var(--fh);color:var(--s3)">${conMora} / ${cur.length}</strong>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  LINE CHART
+// ═══════════════════════════════════════════════════════════
+const LINE_COLORS = ['#f97316','#3b82f6','#22c55e','#a855f7','#facc15',
+                     '#06b6d4','#ef4444','#84cc16','#f43f5e','#0ea5e9'];
+
+function renderLineChart() {
+  const allPeriodos = [...periodos].sort();
+  let bancosToShow = bancos;
+
+  if (showTop10) {
+    const last = allData.filter(r => r.periodo === curPeriodo && r.irr_total != null)
+      .sort((a,b) => b.irr_total - a.irr_total).slice(0,10);
+    bancosToShow = last.map(r => r.banco);
+  }
+
+  if (curSearch) {
+    bancosToShow = bancosToShow.filter(b => b.toLowerCase().includes(curSearch.toLowerCase()));
+  }
+
+  const datasets = bancosToShow.slice(0,15).map((banco, i) => {
+    const data = allPeriodos.map(p => {
+      const row = allData.find(r => r.banco === banco && r.periodo === p);
+      return row?.irr_total ?? null;
+    });
+    return {
+      label: banco,
+      data,
+      borderColor: LINE_COLORS[i % LINE_COLORS.length],
+      backgroundColor: LINE_COLORS[i % LINE_COLORS.length] + '15',
+      borderWidth: 1.5, pointRadius: 3, tension: 0.35,
+      fill: false, spanGaps: true,
+    };
+  });
+
+  const ctx = document.getElementById('line-sistema');
+  if (lineChart) lineChart.destroy();
+  lineChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: allPeriodos.map(p => p.substring(0,7)), datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode:'index', intersect:false },
+      plugins: {
+        legend: { labels:{ color:'#71717a', font:{family:'Figtree',size:9}, boxWidth:8, padding:8 } },
+        tooltip: { backgroundColor:'#18181b', borderColor:'#27272a', borderWidth:1,
+          titleColor:'#fafafa', bodyColor:'#a1a1aa', padding:10,
+          callbacks: { label: c => ` ${c.dataset.label}: ${c.parsed.y?.toFixed(2)||'—'}%` }
+        }
+      },
+      scales: {
+        x: { ticks:{ color:'#52525b', font:{size:9} }, grid:{ color:'#27272a' } },
+        y: { ticks:{ color:'#52525b', font:{size:10}, callback: v => v.toFixed(1)+'%' }, grid:{ color:'#27272a' } }
+      }
+    }
+  });
+
+  document.getElementById('line-sub').textContent =
+    `${bancosToShow.length} entidades · ${showTop10 ? 'Top 10 por mora' : 'todas'} · ${allPeriodos.length} períodos`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  HEATMAP
+// ═══════════════════════════════════════════════════════════
+function renderHeatmap() {
+  const allPeriodos = [...periodos].sort();
+  let bancosToShow = getFiltered().map(r => r.banco);
+  if (!bancosToShow.length) bancosToShow = bancos;
+
+  let html = `<div class="hm-grid" style="grid-template-columns:130px repeat(${allPeriodos.length},1fr)">`;
+  html += '<div></div>' + allPeriodos.map(p => `<div class="hm-head">${p.substring(0,7)}</div>`).join('');
+
+  bancosToShow.forEach(banco => {
+    html += `<div class="hm-lbl" title="${banco}">${banco.substring(0,20)}</div>`;
+    allPeriodos.forEach(p => {
+      const row = allData.find(r => r.banco === banco && r.periodo === p);
+      const v = row?.irr_total;
+      const bg = heatColor(v);
+      const tc = v != null && v > 7 ? '#fff' : '#09090b';
+      const title = `${banco} · ${p.substring(0,7)}: ${v != null ? v.toFixed(2)+'%' : '—'}`;
+      html += `<div class="hm-cell" style="background:${bg};color:${tc}" title="${title}" onclick="seleccionarBanco('${banco.replace(/'/g,"\\'")}')">
+        ${v != null ? v.toFixed(1) : ''}
+      </div>`;
+    });
+  });
+
+  html += '</div>';
+  document.getElementById('heatmap').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DETALLE BANCO
+// ═══════════════════════════════════════════════════════════
+function seleccionarBanco(banco) {
+  if (selBanco === banco) { cerrarDetalle(); return; }
+  selBanco = banco;
+
+  const panel = document.getElementById('detail-panel');
+  panel.classList.add('visible');
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  document.getElementById('detail-name').textContent = banco;
+  document.getElementById('detail-tipo').textContent = `Entidad financiera · Datos BCRA · ${periodos.length} períodos disponibles`;
+
+  // KPIs último período
+  const last = allData.find(r => r.banco === banco && r.periodo === curPeriodo);
+  const prev = allData.find(r => r.banco === banco && r.periodo === getPrevPeriodo());
+
+  const dkpis = [
+    { cls:'s1', label:'Sit. 1', k:'sit1' },
+    { cls:'s2', label:'Sit. 2', k:'sit2' },
+    { cls:'s3', label:'Sit. 3', k:'sit3' },
+    { cls:'s4', label:'Sit. 4', k:'sit4' },
+    { cls:'s5', label:'Sit. 5', k:'sit5' },
+  ];
+  document.getElementById('detail-kpis').innerHTML = dkpis.map(d => {
+    const v = last?.[d.k];
+    const p = prev?.[d.k];
+    const delta = v != null && p != null ? +(v-p).toFixed(2) : null;
+    return `<div class="detail-kpi ${d.cls}">
+      <div class="detail-kpi-label">${d.label}</div>
+      <div class="detail-kpi-val">${v != null ? (+v).toFixed(1)+'%' : '—'}</div>
+      ${delta != null ? `<div style="font-size:10px;color:var(--muted);margin-top:4px">${delta>0?'▲ +':'▼ '}${Math.abs(delta).toFixed(2)} p.p.</div>` : ''}
+    </div>`;
+  }).join('');
+
+  // Gráfico de línea del banco
+  const bancoData = getDataBanco(banco);
+  const ctxL = document.getElementById('detail-line');
+  if (detailLine) detailLine.destroy();
+  detailLine = new Chart(ctxL, {
+    type: 'line',
+    data: {
+      labels: bancoData.map(r => r.periodo.substring(0,7)),
+      datasets: [
+        { label:'Irreg. total', data: bancoData.map(r => r.irr_total), borderColor:'#f97316', borderWidth:2, pointRadius:4, tension:.35, fill:false },
+        { label:'Irreg. privado', data: bancoData.map(r => r.irr_privado), borderColor:'#3b82f6', borderWidth:1.5, pointRadius:3, tension:.35, fill:false },
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:true,
+      plugins:{ legend:{ labels:{ color:'#71717a', font:{family:'Figtree',size:10}, boxWidth:8 } },
+        tooltip:{ backgroundColor:'#18181b', borderColor:'#27272a', borderWidth:1 } },
+      scales:{
+        x:{ ticks:{ color:'#52525b', font:{size:9} }, grid:{ color:'#27272a' } },
+        y:{ ticks:{ color:'#52525b', font:{size:10}, callback:v=>v.toFixed(1)+'%' }, grid:{ color:'#27272a' } }
+      }
+    }
+  });
+
+  // Donut composición
+  const ctxD = document.getElementById('detail-donut');
+  if (detailDonut) detailDonut.destroy();
+  if (last) {
+    detailDonut = new Chart(ctxD, {
+      type: 'doughnut',
+      data: {
+        labels: ['Sit.1','Sit.2','Sit.3','Sit.4','Sit.5'],
+        datasets: [{
+          data: [last.sit1,last.sit2,last.sit3,last.sit4,last.sit5].map(v => v||0),
+          backgroundColor: ['#22c55e','#a3e635','#facc15','#f97316','#ef4444'],
+          borderWidth:2, borderColor:'#18181b',
+        }]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:true, cutout:'60%',
+        plugins:{
+          legend:{ position:'bottom', labels:{ color:'#71717a', font:{family:'Figtree',size:9}, boxWidth:8, padding:8 } },
+          tooltip:{ backgroundColor:'#18181b', borderColor:'#27272a', borderWidth:1,
+            callbacks:{ label: c => ` ${c.label}: ${(+c.parsed).toFixed(2)}%` } }
+        }
+      }
+    });
+  }
+
+  renderRanking(); // actualizar seleccionado en tabla
+}
+
+function cerrarDetalle() {
+  selBanco = null;
+  document.getElementById('detail-panel').classList.remove('visible');
+  renderRanking();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DEMO DATA
+// ═══════════════════════════════════════════════════════════
+function cargarDemoData() {
+  const DEMO_BANCOS = [
+    'Galicia','Santander','BBVA','Macro','Supervielle',
+    'Banco Nación','Banco Provincia','Banco Ciudad','Credicoop','Patagonia',
+    'Hipotecario','ICBC','Comafi','Brubank','Ualá Bank',
+    'Naranja Digital','Crédito Regional','BSF','Coinag','Columbia'
+  ];
+  const DEMO_PERIODOS = ['2023-12-01','2024-12-01','2025-08-01','2025-09-01','2025-10-01','2025-11-01','2025-12-01'];
+
+  allData = [];
+  DEMO_BANCOS.forEach(banco => {
+    let base = Math.random() * 12 + 1;
+    DEMO_PERIODOS.forEach((p, i) => {
+      base += (Math.random() - 0.4) * 0.8;
+      base = Math.max(0.5, Math.min(35, base));
+      const irr = base;
+      const s5  = +(irr * 0.35 + Math.random()*0.5).toFixed(2);
+      const s4  = +(irr * 0.18 + Math.random()*0.3).toFixed(2);
+      const s3  = +(irr * 0.20 + Math.random()*0.3).toFixed(2);
+      const s2  = +(irr * 0.25 + Math.random()*0.5).toFixed(2);
+      const s1  = +(Math.max(0, 100 - irr - s2)).toFixed(2);
+      allData.push({
+        banco, periodo: p,
+        sit1: s1, sit2: s2, sit3: s3, sit4: s4, sit5: s5,
+        irr_total: +irr.toFixed(2), irr_privado: +(irr*0.9).toFixed(2),
+        activo: Math.round(Math.random()*5000000+100000),
+        prestamos: Math.round(Math.random()*2000000+50000),
+        depositos: Math.round(Math.random()*3000000+100000),
+        cobertura: +(80 + Math.random()*40).toFixed(1),
+      });
+    });
+  });
+
+  periodos  = [...new Set(allData.map(r => r.periodo))].sort().reverse();
+  bancos    = [...new Set(allData.map(r => r.banco))].sort();
+  curPeriodo = periodos[0];
+
+  setStatus('y', `Demo · ${bancos.length} entidades simuladas`);
+  document.getElementById('footer-info').textContent = `MODO DEMO — datos simulados`;
+  renderPeriodPills();
+  renderAll();
+  hideLoader();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER ALL
+// ═══════════════════════════════════════════════════════════
+function renderAll() {
+  renderKPIs();
+  renderRanking();
+  renderDonutSistema();
+  renderStats();
+  renderLineChart();
+  renderHeatmap();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════════════════
+(function boot() {
+  setLoader('Conectando a Supabase...');
+  cargarDatos();
+})();
+</script>
+</body>
+</html>
