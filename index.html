@@ -555,38 +555,86 @@ let selBanco  = null;
 let lineChart, donutChart, detailLine, detailDonut;
 
 // ═══════════════════════════════════════════════════════════
-//  CARGA DE DATOS
+//  CARGA DE DATOS — progresiva
+//  1. Primero carga el último período → renderiza inmediato
+//  2. Después carga el histórico en background
 // ═══════════════════════════════════════════════════════════
+
+const COLS = 'banco,periodo,sit1,sit2,sit3,sit4,sit5,irr_total,irr_privado,activo,prestamos,depositos,patrimonio,cobertura,roa,liquidez';
+let historicoCargado = false;
+
 async function cargarDatos() {
-  setLoader('Cargando períodos...');
-
   try {
-    // Cargar vista bcra_ent_mora completa
-    setLoader('Descargando datos de Supabase...');
-    const raw = await sbFetch('bcra_ent_mora_cache',
-      'select=banco,periodo,sit1,sit2,sit3,sit4,sit5,irr_total,irr_privado,activo,prestamos,depositos,patrimonio,cobertura,roa,liquidez&order=banco.asc,periodo.desc'
+    // ── PASO 1: obtener períodos disponibles ────────────────
+    setLoader('Obteniendo períodos...');
+    const pRows = await sbFetch('bcra_ent_mora_cache',
+      'select=periodo&order=periodo.desc'
     );
-
-    allData  = raw;
-    periodos = [...new Set(raw.map(r => r.periodo))].sort().reverse();
-    bancos   = [...new Set(raw.map(r => r.banco))].sort();
+    periodos   = [...new Set(pRows.map(r => r.periodo))].sort().reverse();
     curPeriodo = periodos[0];
 
-    setStatus('g', `Conectado · ${bancos.length} entidades`);
-    showCfgMsg('✓ Conectado', 'ok');
+    // ── PASO 2: cargar solo el último período ───────────────
+    setLoader(`Cargando ${curPeriodo.substring(0,7)}...`);
+    const ultimoRaw = await sbFetch('bcra_ent_mora_cache',
+      `select=${COLS}&periodo=eq.${curPeriodo}&order=banco.asc`
+    );
 
-    document.getElementById('footer-info').textContent =
-      `${bancos.length} entidades · ${periodos.length} períodos · ${raw.length.toLocaleString('es-AR')} registros`;
+    allData  = ultimoRaw;
+    bancos   = [...new Set(ultimoRaw.map(r => r.banco))].sort();
 
+    // Mostrar dashboard inmediatamente con el último período
     renderPeriodPills();
     renderAll();
     hideLoader();
+    setStatus('g', `Conectado · ${bancos.length} entidades`);
+    document.getElementById('footer-info').textContent =
+      `${bancos.length} entidades · cargando histórico...`;
+
+    // ── PASO 3: cargar histórico en background ──────────────
+    cargarHistorico();
 
   } catch(e) {
-    showCfgMsg('Error: ' + e.message, 'err');
-    setStatus('r', 'Error de conexión');
+    setStatus('r', 'Error: ' + e.message);
     hideLoader();
     console.error(e);
+  }
+}
+
+async function cargarHistorico() {
+  try {
+    // Cargar períodos anteriores de a uno para no bloquear
+    const periodosAnteriores = periodos.slice(1); // ya tenemos el primero
+
+    for (const p of periodosAnteriores) {
+      const rows = await sbFetch('bcra_ent_mora_cache',
+        `select=${COLS}&periodo=eq.${p}&order=banco.asc`
+      );
+      // Agregar al allData sin duplicar
+      allData = [...allData, ...rows];
+      bancos  = [...new Set(allData.map(r => r.banco))].sort();
+
+      // Actualizar footer con progreso
+      const cargados = periodos.indexOf(p) + 1;
+      document.getElementById('footer-info').textContent =
+        `${bancos.length} entidades · ${cargados}/${periodos.length} períodos cargados`;
+
+      // Actualizar pills para que el usuario pueda navegar
+      renderPeriodPills();
+
+      // Pequeña pausa para no bloquear el UI
+      await new Promise(r => setTimeout(r, 50));
+    }
+
+    historicoCargado = true;
+    document.getElementById('footer-info').textContent =
+      `${bancos.length} entidades · ${periodos.length} períodos · ${allData.length.toLocaleString('es-AR')} registros`;
+
+    // Re-renderizar gráficos que usan histórico
+    renderLineChart();
+    renderHeatmap();
+
+  } catch(e) {
+    console.error('Error cargando histórico:', e);
   }
 }
 
