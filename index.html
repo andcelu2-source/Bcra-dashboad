@@ -563,7 +563,7 @@ async function cargarDatos() {
   try {
     // Cargar vista bcra_ent_mora completa
     setLoader('Descargando datos de Supabase...');
-    const raw = await sbFetch('bcra_ent_mora',
+    const raw = await sbFetch('bcra_ent_mora_cache',
       'select=banco,periodo,sit1,sit2,sit3,sit4,sit5,irr_total,irr_privado,activo,prestamos,depositos,patrimonio,cobertura,roa,liquidez&order=banco.asc,periodo.desc'
     );
 
